@@ -254,6 +254,9 @@
     els.fmTags.value = arrayToString(fm.tags);
     els.fmCategories.value = arrayToString(fm.categories);
     els.editor.value = currentPost.content || '';
+    // Reset scroll positions so updatePreview renders the new post from the top.
+    els.editor.scrollTop = 0;
+    els.preview.scrollTop = 0;
     updatePreview();
     updateWordCount();
     setDirty(false);
@@ -261,7 +264,27 @@
   }
 
   function updatePreview() {
-    els.preview.innerHTML = renderMarkdown(els.editor.value);
+    // Preserve the preview scroll ratio across the re-render so the view
+    // does not jump back to the top while typing.
+    const p = els.preview;
+    const max = p.scrollHeight - p.clientHeight;
+    const ratio = max > 0 ? p.scrollTop / max : 0;
+    p.innerHTML = renderMarkdown(els.editor.value);
+    const newMax = p.scrollHeight - p.clientHeight;
+    p.scrollTop = ratio * (newMax > 0 ? newMax : 0);
+  }
+
+  // Bidirectional proportional scroll sync between editor and preview.
+  let scrollSyncing = false;
+  function syncScroll(source, target) {
+    if (scrollSyncing) return;
+    scrollSyncing = true;
+    const max = source.scrollHeight - source.clientHeight;
+    const ratio = max > 0 ? source.scrollTop / max : 0;
+    const targetMax = target.scrollHeight - target.clientHeight;
+    target.scrollTop = ratio * (targetMax > 0 ? targetMax : 0);
+    // Release the lock after the programmatic scroll event has been delivered.
+    requestAnimationFrame(() => { scrollSyncing = false; });
   }
 
   function arrayToString(value) {
@@ -443,11 +466,17 @@
   els.btnSave.addEventListener('click', savePost);
   els.btnDelete.addEventListener('click', deletePost);
 
+  let previewTimer = null;
   els.editor.addEventListener('input', () => {
-    updatePreview();
+    // Debounce the markdown re-render; word count and dirty state stay instant.
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(updatePreview, 150);
     updateWordCount();
     setDirty(true);
   });
+
+  els.editor.addEventListener('scroll', () => syncScroll(els.editor, els.preview));
+  els.preview.addEventListener('scroll', () => syncScroll(els.preview, els.editor));
 
   [els.fmTitle, els.fmDate, els.fmTags, els.fmCategories].forEach(input => {
     input.addEventListener('input', () => setDirty(true));
