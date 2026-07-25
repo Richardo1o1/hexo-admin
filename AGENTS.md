@@ -5,16 +5,16 @@
 这是一个个人博客内容仓库 + 自建的 Hexo 文章管理后台，包含两部分：
 
 - `_posts/` —— 博客的 Markdown 文章源文件（约 356 篇），大部分内容为中文，按 Hexo 的 Front Matter 格式编写。
-- `hexo-admin/` —— 一个独立的 Node.js/Express 管理后台，用于浏览、编辑、新建、删除 `_posts/` 中的文章，并可在配置的 Hexo 站点目录下执行 `hexo generate` / `deploy` / `clean` 命令。
+- 仓库根目录下的 Node.js/Express 管理后台（`server.js` + `public/`），用于浏览、编辑、新建、删除 `_posts/` 中的文章，并可在配置的 Hexo 站点目录下执行 `hexo generate` / `deploy` / `clean` 命令。
 
 注意：本目录**不是**一个完整的 Hexo 站点（没有 `_config.yml`、`themes/`、`source/` 等），也不包含 Hexo 本体依赖。`_posts/` 是从 Hexo 站点 `source/_posts` 同步/存放的文章目录。仓库当前没有初始化 git。
 
-真实的 Hexo 站点在远程服务器（Linux）的 `/root/blog`，文章位于 `/root/blog/source/_posts/`。`hexo-admin` 设计为拷贝到该服务器上运行，直接编辑真实站点文件并执行发布命令；本机（macOS）没有 Hexo 环境，不要在本机尝试验证 hexo 命令。
+真实的 Hexo 站点在远程服务器（Linux）的 `/root/blog`，文章位于 `/root/blog/source/_posts/`。本管理后台设计为拷贝到该服务器上运行，直接编辑真实站点文件并执行发布命令；本机（macOS）没有 Hexo 环境，不要在本机尝试验证 hexo 命令。
 
 ## 技术栈
 
-- 后端：Node.js + Express 4（`hexo-admin/server.js`，单文件，CommonJS）
-- 前端：纯 HTML + 原生 JS（`hexo-admin/public/`），无构建步骤
+- 后端：Node.js + Express 4（`server.js`，单文件，CommonJS）
+- 前端：纯 HTML + 原生 JS（`public/`），无构建步骤
   - 样式：Tailwind CSS（CDN 引入，`index.html`）
   - Markdown 渲染：`marked`（前端 CDN + 后端 npm 包均使用）
 - Front Matter 解析：`gray-matter`
@@ -23,20 +23,19 @@
 ## 构建与运行
 
 ```bash
-cd hexo-admin
 npm install
 npm start          # 等价于 node server.js，npm run dev 相同
 ```
 
 启动后访问 `http://localhost:4001`。
 
-配置优先级：环境变量 > `hexo-admin/hexo-admin.config.json` > 默认值。配置文件字段：`sitePath`、`port`、`adminPassword`（当前 `sitePath` 指向服务器路径 `/root/blog`，本机启动时会回退使用仓库根目录的 `_posts/`）。
+配置优先级：环境变量 > `hexo-admin.config.json` > 默认值。配置文件字段：`sitePath`、`port`、`adminPassword`（当前 `sitePath` 指向服务器路径 `/root/blog`，本机启动时会回退使用仓库根目录的 `_posts/`）。
 
 环境变量：
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `HEXO_SITE_PATH` | 真正的 Hexo 站点根目录 | 配置文件 `sitePath` → 上级目录（即本仓库根目录） |
+| `HEXO_SITE_PATH` | 真正的 Hexo 站点根目录 | 配置文件 `sitePath` → 当前目录（即本仓库根目录） |
 | `PORT` | 服务端口 | 配置文件 `port` → `4001` |
 | `ADMIN_PASSWORD` | 设置后启用 Bearer Token 鉴权 | 配置文件 `adminPassword` → 无（不鉴权） |
 
@@ -48,18 +47,17 @@ npm start          # 等价于 node server.js，npm run dev 相同
 
 ```
 _posts/                  # Markdown 文章（内容主体，约 356 篇）
-hexo-admin/
-├── server.js            # Express 后端：REST API + 静态资源服务
-├── hexo-admin.config.json  # 站点路径/端口/管理密码（被 .gitignore 忽略，由 hexo-admin.config.example.json 复制而来）
-├── public/
-│   ├── index.html       # 页面结构 + CDN 引入（Tailwind + typography、marked）
-│   ├── app.js           # 前端逻辑：列表/筛选/编辑器/发布/401 密码处理（IIFE，无模块）
-│   └── styles.css       # 少量自定义样式
-├── package.json
-└── README.md            # 使用说明（中文，含 API 表）
+server.js                # Express 后端：REST API + 静态资源服务
+hexo-admin.config.json   # 站点路径/端口/管理密码（被 .gitignore 忽略，由 hexo-admin.config.example.json 复制而来）
+public/
+├── index.html           # 页面结构 + CDN 引入（Tailwind + typography、marked）
+├── app.js               # 前端逻辑：列表/筛选/编辑器/发布/401 密码处理（IIFE，无模块）
+└── styles.css           # 少量自定义样式
+package.json
+README.md                # 使用说明（中文，含 API 表）
 ```
 
-后端 API（详见 `hexo-admin/README.md`）：`GET /api/config`（公开）、`GET /api/posts`（支持 `q`/`tag`/`category`/`page`/`pageSize`）、`GET|PUT|DELETE /api/posts/:slug`、`POST /api/posts`、`POST /api/hexo/publish`、`POST /api/hexo/:command`、`GET /api/health`。除 `/api/config` 外所有 API 在启用密码后都经过 `requireAuth` 中间件鉴权；前端在收到 401 时弹窗输入密码并存入 sessionStorage。
+后端 API（详见 `README.md`）：`GET /api/config`（公开）、`GET /api/posts`（支持 `q`/`tag`/`category`/`page`/`pageSize`）、`GET|PUT|DELETE /api/posts/:slug`、`POST /api/posts`、`POST /api/hexo/publish`、`POST /api/hexo/:command`、`GET /api/health`。除 `/api/config` 外所有 API 在启用密码后都经过 `requireAuth` 中间件鉴权；前端在收到 401 时弹窗输入密码并存入 sessionStorage。
 
 ## 文章（Front Matter）约定
 
@@ -92,7 +90,7 @@ categories:
 项目没有任何自动化测试。验证后端改动的方式是手动启动服务并请求 API，例如：
 
 ```bash
-cd hexo-admin && npm start
+npm start
 curl http://localhost:4001/api/health
 curl http://localhost:4001/api/posts?pageSize=5
 ```

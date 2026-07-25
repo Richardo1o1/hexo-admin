@@ -30,8 +30,7 @@ function resolveSitePath() {
     return { sitePath: resolved, source: process.env.HEXO_SITE_PATH ? 'HEXO_SITE_PATH env' : 'hexo-admin.config.json' };
   }
   // Fallback: the current directory may itself contain _posts (development convenience).
-  const fallback = path.resolve(__dirname, '..');
-  return { sitePath: fallback, source: 'parent directory fallback' };
+  return { sitePath: __dirname, source: 'current directory fallback' };
 }
 
 function resolvePostsDir(sitePath) {

@@ -13,4 +13,4 @@ _posts/
 
 # 本地配置（含站点路径和管理密码，勿提交）
 # 服务器上部署时参考 hexo-admin.config.example.json 自行创建
-hexo-admin/hexo-admin.config.json
+hexo-admin.config.json

@@ -15,7 +15,7 @@
 ## 目录结构
 
 ```
-hexo-admin/
+.
 ├── server.js          # Express 后端
 ├── package.json
 ├── README.md
@@ -28,7 +28,6 @@ hexo-admin/
 ## 安装
 
 ```bash
-cd hexo-admin
 npm install
 ```
 
@@ -64,7 +63,7 @@ npm start
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `HEXO_SITE_PATH` | Hexo 站点根目录 | 配置文件 `sitePath` → 上级目录 |
+| `HEXO_SITE_PATH` | Hexo 站点根目录 | 配置文件 `sitePath` → 当前目录 |
 | `PORT` | 服务端口 | 配置文件 `port` → `4001` |
 | `ADMIN_PASSWORD` | 设置后启用 Bearer Token 鉴权 | 配置文件 `adminPassword` → 无 |
 
@@ -82,8 +81,7 @@ HEXO_SITE_PATH=/path/to/your/hexo-site npm start
 本后台需要运行在有 Hexo 环境的机器上（即站点所在服务器）：
 
 ```bash
-# 把 hexo-admin 目录拷到服务器后
-cd hexo-admin
+# 把本目录拷到服务器后
 npm install
 cp hexo-admin.config.example.json hexo-admin.config.json
 # 编辑 hexo-admin.config.json 指向站点，并设置 adminPassword
