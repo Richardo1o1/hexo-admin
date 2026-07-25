@@ -312,9 +312,9 @@ function runHexo(args) {
   });
 }
 
-// POST /api/hexo/publish — one-click publish: hexo clean → generate → deploy.
+// POST /api/hexo/publish — one-click publish: hexo generate → deploy.
 app.post('/api/hexo/publish', requireSitePath, async (req, res) => {
-  const steps = ['clean', 'generate', 'deploy'];
+  const steps = ['generate', 'deploy'];
   let output = '';
 
   for (const step of steps) {

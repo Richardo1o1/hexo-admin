@@ -464,14 +464,14 @@
     }
   }
 
-  // One-click publish: hexo clean → generate → deploy
+  // One-click publish: hexo generate → deploy
   async function publish() {
     if (isDirty) {
       showStatus('有未保存的更改，请先保存再发布', 'error');
       return;
     }
-    if (!confirm('确定要发布吗？将依次执行 hexo clean → generate → deploy。')) return;
-    els.cmdTitle.textContent = '一键发布 (clean → generate → deploy)';
+    if (!confirm('确定要发布吗？将依次执行 hexo generate → deploy。')) return;
+    els.cmdTitle.textContent = '一键发布 (generate → deploy)';
     els.cmdOutput.textContent = '发布中，可能需要几分钟，请耐心等待...';
     els.cmdOutput.className = 'flex-1 overflow-auto p-4 text-xs font-mono bg-slate-900 text-slate-100 m-0 rounded-b-xl';
     showCmdModal();

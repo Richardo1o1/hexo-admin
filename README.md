@@ -7,7 +7,7 @@
 - 📂 文章列表、搜索、按标签/分类筛选、分页
 - ✏️ 分屏 Markdown 编辑器（源码 + 实时预览，滚动同步）
 - 🏷️ 可视化 Front Matter 编辑（标题、日期、标签、分类）
-- 🚀 一键发布：串行执行 `hexo clean → generate → deploy`，实时查看输出
+- 🚀 一键发布：串行执行 `hexo generate → deploy`，实时查看输出
 - 🔧 也可单独执行 `hexo generate` / `deploy` / `clean`
 - 🔒 基于 [Clerk](https://clerk.com) 的登录鉴权
 - 💻 纯 HTML/JS 前端 + Node.js/Express 后端，无需构建步骤
@@ -98,7 +98,7 @@ http://localhost:4001
 
 ### 一键发布
 
-工具栏的「一键发布」按钮会串行执行 `hexo clean → hexo generate → hexo deploy`，逐步显示输出，任一步失败即中断并显示已产生的日志。发布前若当前文章有未保存更改，会先提示保存。
+工具栏的「一键发布」按钮会串行执行 `hexo generate → hexo deploy`，逐步显示输出，任一步失败即中断并显示已产生的日志。发布前若当前文章有未保存更改，会先提示保存。
 
 ### Hexo 命令
 
@@ -120,7 +120,7 @@ http://localhost:4001
 | POST | `/api/posts` | 新建文章 |
 | PUT | `/api/posts/:slug` | 更新文章 |
 | DELETE | `/api/posts/:slug` | 删除文章 |
-| POST | `/api/hexo/publish` | 一键发布：串行执行 clean → generate → deploy |
+| POST | `/api/hexo/publish` | 一键发布：串行执行 generate → deploy |
 | POST | `/api/hexo/:command` | 执行单个 Hexo 命令 |
 
 鉴权方式：请求头携带 `Authorization: Bearer <Clerk session token>`，后端使用 `@clerk/backend` 的 `verifyToken` 校验。
