@@ -11,6 +11,8 @@
   let pageSize = 20;
   let isDirty = false;
   let searchTimer = null;
+  let allKnownTags = [];        // every tag in the blog, for autocomplete
+  let allKnownCategories = [];  // every category in the blog, for autocomplete
 
   // Elements
   const els = {
@@ -27,8 +29,12 @@
     fmTitle: document.getElementById('fm-title'),
     fmDate: document.getElementById('fm-date'),
     fmSlug: document.getElementById('fm-slug'),
-    fmTags: document.getElementById('fm-tags'),
-    fmCategories: document.getElementById('fm-categories'),
+    fmTagsBox: document.getElementById('fm-tags-box'),
+    fmTagsInput: document.getElementById('fm-tags-input'),
+    fmTagsDropdown: document.getElementById('fm-tags-dropdown'),
+    fmCategoriesBox: document.getElementById('fm-categories-box'),
+    fmCategoriesInput: document.getElementById('fm-categories-input'),
+    fmCategoriesDropdown: document.getElementById('fm-categories-dropdown'),
     editor: document.getElementById('editor'),
     preview: document.getElementById('preview'),
     wordCount: document.getElementById('word-count'),
@@ -240,6 +246,8 @@
       renderPostList(data.items);
       renderPagination(data);
       updateFilters(data.tags, data.categories);
+      allKnownTags = data.tags || [];
+      allKnownCategories = data.categories || [];
     } catch (e) {
       els.postList.innerHTML = `<div class="p-4 text-sm text-red-600">加载失败: ${escapeHtml(e.message)}</div>`;
     }
@@ -308,6 +316,147 @@
     els.categoryFilter.value = catVal;
   }
 
+  // Chip editor factory: chips for selected values, inline input with
+  // autocomplete from values already used in the blog. Used for tags
+  // and categories.
+  function createChipEditor({ box, input, dropdown, getKnown }) {
+    let chips = [];
+    let suggestIndex = -1;
+
+    function render() {
+      box.querySelectorAll('.chip').forEach(el => el.remove());
+      chips.forEach((value, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'chip inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 rounded px-2 py-0.5 text-xs whitespace-nowrap';
+        const label = document.createElement('span');
+        label.textContent = value;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.index = i;
+        btn.className = 'chip-remove text-indigo-400 hover:text-indigo-700 leading-none';
+        btn.textContent = '×';
+        chip.append(label, btn);
+        box.insertBefore(chip, input);
+      });
+    }
+
+    function hide() {
+      dropdown.classList.add('hidden');
+      suggestIndex = -1;
+    }
+
+    function suggestions() {
+      const q = input.value.trim().toLowerCase();
+      return getKnown()
+        .filter(t => !chips.includes(t) && (!q || t.toLowerCase().includes(q)))
+        .slice(0, 8);
+    }
+
+    function update() {
+      const matches = suggestions();
+      if (!matches.length) {
+        hide();
+        return;
+      }
+      suggestIndex = Math.min(suggestIndex, matches.length - 1);
+      dropdown.innerHTML = matches.map((t, i) =>
+        `<div data-index="${i}" class="chip-suggestion px-3 py-1.5 cursor-pointer hover:bg-indigo-50 ${i === suggestIndex ? 'bg-indigo-50' : ''}">${escapeHtml(t)}</div>`
+      ).join('');
+      dropdown.classList.remove('hidden');
+    }
+
+    function add(value) {
+      value = value.trim();
+      input.value = '';
+      suggestIndex = -1;
+      hide();
+      if (!value || chips.includes(value)) return;
+      chips.push(value);
+      render();
+      setDirty(true);
+    }
+
+    function remove(index) {
+      chips.splice(index, 1);
+      render();
+      setDirty(true);
+    }
+
+    box.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip-remove');
+      if (btn) {
+        remove(parseInt(btn.dataset.index, 10));
+        return;
+      }
+      input.focus();
+    });
+    input.addEventListener('focus', update);
+    input.addEventListener('input', () => {
+      suggestIndex = -1;
+      update();
+    });
+    input.addEventListener('blur', () => {
+      // Delay so a mousedown on a suggestion can land first.
+      setTimeout(hide, 150);
+    });
+    dropdown.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // keep focus on the input
+      const item = e.target.closest('.chip-suggestion');
+      if (item) add(item.textContent);
+    });
+    input.addEventListener('keydown', (e) => {
+      const matches = suggestions();
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        if (e.key === 'Enter' && suggestIndex >= 0 && matches[suggestIndex]) {
+          add(matches[suggestIndex]);
+        } else if (input.value.trim()) {
+          add(input.value);
+        }
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (!matches.length) return;
+        e.preventDefault();
+        const delta = e.key === 'ArrowDown' ? 1 : -1;
+        suggestIndex = (suggestIndex + delta + matches.length) % matches.length;
+        update();
+      } else if (e.key === 'Backspace' && !input.value && chips.length) {
+        remove(chips.length - 1);
+      } else if (e.key === 'Escape') {
+        hide();
+      }
+    });
+
+    return {
+      set(values) {
+        chips = [...new Set((values || []).map(v => String(v).trim()).filter(Boolean))];
+        input.value = '';
+        suggestIndex = -1;
+        render();
+        hide();
+      },
+      get() {
+        return [...chips];
+      },
+      // Fold any half-typed text into a chip (called before saving).
+      commitPending() {
+        if (input.value.trim()) add(input.value);
+      }
+    };
+  }
+
+  const tagEditor = createChipEditor({
+    box: els.fmTagsBox,
+    input: els.fmTagsInput,
+    dropdown: els.fmTagsDropdown,
+    getKnown: () => allKnownTags
+  });
+  const categoryEditor = createChipEditor({
+    box: els.fmCategoriesBox,
+    input: els.fmCategoriesInput,
+    dropdown: els.fmCategoriesDropdown,
+    getKnown: () => allKnownCategories
+  });
+
   // Editing
   async function openPost(slug) {
     if (!slug || slug === currentSlug) return;
@@ -328,8 +477,8 @@
     els.fmTitle.value = fm.title || '';
     els.fmDate.value = fm.date ? formatDate(fm.date) : '';
     els.fmSlug.value = currentPost.slug;
-    els.fmTags.value = arrayToString(fm.tags);
-    els.fmCategories.value = arrayToString(fm.categories);
+    tagEditor.set(fm.tags);
+    categoryEditor.set(fm.categories);
     els.editor.value = currentPost.content || '';
     // Reset scroll positions so updatePreview renders the new post from the top.
     els.editor.scrollTop = 0;
@@ -364,18 +513,11 @@
     requestAnimationFrame(() => { scrollSyncing = false; });
   }
 
-  function arrayToString(value) {
-    if (!value) return '';
-    if (Array.isArray(value)) return value.join(', ');
-    return String(value);
-  }
-
-  function stringToArray(str) {
-    return str.split(/[,，]/).map(s => s.trim()).filter(Boolean);
-  }
-
   async function savePost() {
     if (!currentSlug) return;
+    // Commit any half-typed tag/category before saving.
+    tagEditor.commitPending();
+    categoryEditor.commitPending();
     showStatus('保存中...');
     try {
       await api(`/api/posts/${encodeURIComponent(currentSlug)}`, {
@@ -384,8 +526,8 @@
         body: JSON.stringify({
           title: els.fmTitle.value,
           date: els.fmDate.value,
-          tags: stringToArray(els.fmTags.value),
-          categories: stringToArray(els.fmCategories.value),
+          tags: tagEditor.get(),
+          categories: categoryEditor.get(),
           content: els.editor.value
         })
       });
@@ -440,8 +582,8 @@
     els.fmTitle.value = '';
     els.fmDate.value = '';
     els.fmSlug.value = '';
-    els.fmTags.value = '';
-    els.fmCategories.value = '';
+    tagEditor.set([]);
+    categoryEditor.set([]);
     els.editor.value = '';
     els.preview.innerHTML = '';
     updateWordCount();
@@ -560,7 +702,7 @@
   els.editor.addEventListener('scroll', () => syncScroll(els.editor, els.preview));
   els.preview.addEventListener('scroll', () => syncScroll(els.preview, els.editor));
 
-  [els.fmTitle, els.fmDate, els.fmTags, els.fmCategories].forEach(input => {
+  [els.fmTitle, els.fmDate].forEach(input => {
     input.addEventListener('input', () => setDirty(true));
   });
 

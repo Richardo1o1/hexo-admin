@@ -114,12 +114,22 @@
         <input id="fm-slug" type="text" readonly class="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-500" />
       </div>
       <div class="col-span-12 lg:col-span-6">
-        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">标签（逗号分隔）</label>
-        <input id="fm-tags" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">标签</label>
+        <div id="fm-tags" class="relative">
+          <div id="fm-tags-box" class="w-full min-h-[38px] bg-white border border-slate-200 rounded-lg px-2 py-1 flex flex-wrap items-center gap-1 cursor-text focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent">
+            <input id="fm-tags-input" type="text" class="flex-1 min-w-[90px] px-1 py-0.5 text-sm outline-none" placeholder="输入以搜索或新建标签" />
+          </div>
+          <div id="fm-tags-dropdown" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto text-sm"></div>
+        </div>
       </div>
       <div class="col-span-12 lg:col-span-6">
-        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">分类（逗号分隔）</label>
-        <input id="fm-categories" type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">分类</label>
+        <div id="fm-categories" class="relative">
+          <div id="fm-categories-box" class="w-full min-h-[38px] bg-white border border-slate-200 rounded-lg px-2 py-1 flex flex-wrap items-center gap-1 cursor-text focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent">
+            <input id="fm-categories-input" type="text" class="flex-1 min-w-[90px] px-1 py-0.5 text-sm outline-none" placeholder="输入以搜索或新建分类" />
+          </div>
+          <div id="fm-categories-dropdown" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto text-sm"></div>
+        </div>
       </div>
     </div>
 
