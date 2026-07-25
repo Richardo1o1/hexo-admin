@@ -5,6 +5,8 @@ const { exec } = require('child_process');
 const util = require('util');
 const matter = require('gray-matter');
 const { marked } = require('marked');
+const { verifyToken } = require('@clerk/backend');
+require('dotenv').config();
 
 const execAsync = util.promisify(exec);
 const app = express();
@@ -12,22 +14,16 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Config precedence: environment variables > hexo-admin.config.json > defaults.
-let fileConfig = {};
-try {
-  fileConfig = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'hexo-admin.config.json'), 'utf-8'));
-} catch (e) {
-  // No config file is fine; env vars and defaults still apply.
-}
-
-const PORT = process.env.PORT || fileConfig.port || 4001;
-const HEXO_SITE_PATH = process.env.HEXO_SITE_PATH || fileConfig.sitePath;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || fileConfig.adminPassword;
+// All configuration comes from environment variables (optionally via a local .env file).
+const PORT = process.env.PORT || 4001;
+const HEXO_SITE_PATH = process.env.HEXO_SITE_PATH;
+const CLERK_PUBLISHABLE_KEY = process.env.CLERK_PUBLISHABLE_KEY;
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 function resolveSitePath() {
   if (HEXO_SITE_PATH) {
     const resolved = path.resolve(HEXO_SITE_PATH);
-    return { sitePath: resolved, source: process.env.HEXO_SITE_PATH ? 'HEXO_SITE_PATH env' : 'hexo-admin.config.json' };
+    return { sitePath: resolved, source: 'HEXO_SITE_PATH env' };
   }
   // Fallback: the current directory may itself contain _posts (development convenience).
   return { sitePath: __dirname, source: 'current directory fallback' };
@@ -53,20 +49,27 @@ function requireSitePath(req, res, next) {
   if (!HEXO_SITE_PATH) {
     return res.status(400).json({
       error: 'HEXO_SITE_PATH is not configured',
-      hint: 'Set sitePath in hexo-admin.config.json or start with HEXO_SITE_PATH=/path/to/hexo-site npm start'
+      hint: 'Start with HEXO_SITE_PATH=/path/to/hexo-site npm start (or set it in .env)'
     });
   }
   next();
 }
 
-function requireAuth(req, res, next) {
-  if (!ADMIN_PASSWORD) return next();
+// Clerk auth: verify the session token sent as a Bearer token by the frontend.
+// When CLERK_SECRET_KEY is not set, auth is disabled (local development only).
+async function requireAuth(req, res, next) {
+  if (!CLERK_SECRET_KEY) return next();
   const auth = req.headers.authorization || '';
   const token = auth.replace(/^Bearer\s+/i, '');
-  if (token !== ADMIN_PASSWORD) {
+  if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  next();
+  try {
+    await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
+    next();
+  } catch (e) {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
 }
 
 function toSlug(filename) {
@@ -140,13 +143,15 @@ app.get('/api/config', (req, res) => {
     sitePath,
     postsDir,
     source,
-    authEnabled: Boolean(ADMIN_PASSWORD),
+    authEnabled: Boolean(CLERK_SECRET_KEY),
+    clerkPublishableKey: CLERK_PUBLISHABLE_KEY || null,
     commands: ['generate', 'deploy', 'clean', 'server', 'new']
   });
 });
 
-// All API routes below this line require auth when ADMIN_PASSWORD is set.
-// (/api/config above stays public so the UI can discover whether auth is enabled.)
+// All API routes below this line require a valid Clerk session when
+// CLERK_SECRET_KEY is set. (/api/config above stays public so the UI can
+// discover whether auth is enabled and get the publishable key.)
 app.use('/api', requireAuth);
 
 // GET /api/posts
@@ -366,7 +371,9 @@ app.listen(PORT, () => {
   console.log(`Hexo Admin running at http://localhost:${PORT}`);
   console.log(`  Hexo site path: ${sitePath} (${source})`);
   console.log(`  Posts directory: ${postsDir}`);
-  if (ADMIN_PASSWORD) {
-    console.log('  Authentication: enabled');
+  if (CLERK_SECRET_KEY) {
+    console.log('  Authentication: Clerk (enabled)');
+  } else {
+    console.log('  Authentication: disabled (set CLERK_SECRET_KEY to enable Clerk login)');
   }
 });
