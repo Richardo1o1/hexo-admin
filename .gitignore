@@ -1,0 +1,16 @@
+# 依赖
+node_modules/
+
+# 系统文件
+.DS_Store
+
+# 日志
+*.log
+npm-debug.log*
+
+# 博客文章内容（真实文章在服务器 /root/blog/source/_posts/，本仓库不跟踪）
+_posts/
+
+# 本地配置（含站点路径和管理密码，勿提交）
+# 服务器上部署时参考 hexo-admin.config.example.json 自行创建
+hexo-admin/hexo-admin.config.json

@@ -1,0 +1,23 @@
+{
+  "name": "hexo-admin",
+  "version": "1.0.0",
+  "description": "A standalone admin dashboard for managing Hexo posts",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "hexo",
+    "admin",
+    "dashboard",
+    "blog"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "gray-matter": "^4.0.3",
+    "marked": "^14.1.3"
+  }
+}

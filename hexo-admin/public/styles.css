@@ -1,0 +1,72 @@
+:root {
+  --sidebar-width: 20rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Editor focus */
+#editor {
+  background-color: #f8fafc;
+  border: none;
+  outline: none;
+}
+
+#editor:focus {
+  background-color: #ffffff;
+}
+
+/* Preview typography tweaks (complement @tailwindcss/typography) */
+#preview img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+/* Post list item */
+.post-item {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.post-item:hover {
+  background-color: #f1f5f9;
+}
+
+.post-item.active {
+  background-color: #eef2ff;
+  border-left: 3px solid #4f46e5;
+}
+
+/* Modal animation */
+#cmd-modal, #new-modal {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+#cmd-modal.flex, #new-modal.flex {
+  opacity: 1;
+}
