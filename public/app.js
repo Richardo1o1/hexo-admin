@@ -39,6 +39,7 @@
     cmdClose: document.getElementById('cmd-close'),
     newModal: document.getElementById('new-modal'),
     newTitle: document.getElementById('new-title'),
+    newSlug: document.getElementById('new-slug'),
     newCancel: document.getElementById('new-cancel'),
     newConfirm: document.getElementById('new-confirm'),
     btnHexoMenu: document.getElementById('btn-hexo-menu'),
@@ -400,14 +401,16 @@
     const title = els.newTitle.value.trim();
     if (!title) return;
     if (!confirmDiscardIfDirty()) return;
+    const slug = els.newSlug.value.trim();
     try {
       const result = await api('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title })
+        body: JSON.stringify({ title, ...(slug && { slug }) })
       });
       hideNewModal();
       els.newTitle.value = '';
+      els.newSlug.value = '';
       currentPage = 1;
       await loadPosts();
       currentSlug = null; // openPost skips re-opening the same slug
@@ -536,6 +539,9 @@
   els.newCancel.addEventListener('click', hideNewModal);
   els.newConfirm.addEventListener('click', createPost);
   els.newTitle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') createPost();
+  });
+  els.newSlug.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') createPost();
   });
 
