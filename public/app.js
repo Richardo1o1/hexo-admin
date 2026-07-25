@@ -45,25 +45,39 @@
     btnPublish: document.getElementById('btn-publish'),
     hexoMenu: document.getElementById('hexo-menu'),
     hexoMenuWrap: document.getElementById('hexo-menu-wrap'),
-    hexoCmds: document.querySelectorAll('.hexo-cmd')
+    hexoCmds: document.querySelectorAll('.hexo-cmd'),
+    authOverlay: document.getElementById('auth-overlay'),
+    authHint: document.getElementById('auth-hint'),
+    btnSignIn: document.getElementById('btn-sign-in')
   };
 
+  // Clerk client (initialized in initAuth when auth is enabled)
+  let clerk = null;
+
   // Helpers
-  function getToken() {
-    return sessionStorage.getItem('admin-token') || '';
+  async function getToken() {
+    if (!clerk || !clerk.session) return '';
+    try {
+      return (await clerk.session.getToken()) || '';
+    } catch (e) {
+      return '';
+    }
   }
 
-  async function api(url, options = {}, retried = false) {
+  async function api(url, options = {}) {
     const headers = { ...(options.headers || {}) };
-    const token = getToken();
+    const token = await getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(url, { ...options, headers });
-    if (res.status === 401 && !retried) {
-      const pwd = prompt('请输入管理密码：');
-      if (pwd !== null) {
-        sessionStorage.setItem('admin-token', pwd);
-        return api(url, options, true);
+    if (res.status === 401) {
+      // Session missing or expired: prompt Clerk sign-in; the session
+      // listener in initAuth reloads the UI once signed in.
+      if (clerk) {
+        showAuthOverlay();
+        clerk.openSignIn();
       }
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Unauthorized');
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -144,9 +158,71 @@
     try {
       const cfg = await api('/api/config');
       els.sitePath.textContent = `站点: ${cfg.sitePath}`;
+      return cfg;
     } catch (e) {
       els.sitePath.textContent = `未配置 HEXO_SITE_PATH`;
+      return null;
     }
+  }
+
+  // Clerk auth
+  function showAuthOverlay() {
+    els.authOverlay.classList.remove('hidden');
+    els.authOverlay.classList.add('flex');
+  }
+
+  function hideAuthOverlay() {
+    els.authOverlay.classList.add('hidden');
+    els.authOverlay.classList.remove('flex');
+  }
+
+  function loadClerkScript(publishableKey) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+      s.async = true;
+      s.crossOrigin = 'anonymous';
+      // The browser build auto-creates a window.Clerk instance and reads the
+      // publishable key from this data attribute.
+      s.setAttribute('data-clerk-publishable-key', publishableKey);
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Clerk SDK 加载失败'));
+      document.head.appendChild(s);
+    });
+  }
+
+  // Returns true when the UI may proceed (auth disabled or already signed in).
+  async function initAuth(cfg) {
+    if (!cfg || !cfg.authEnabled) return true;
+    if (!cfg.clerkPublishableKey) {
+      showAuthOverlay();
+      els.authHint.textContent = '服务端未配置 CLERK_PUBLISHABLE_KEY，请联系管理员';
+      return false;
+    }
+    try {
+      await loadClerkScript(cfg.clerkPublishableKey);
+      // clerk.browser.js exposes window.Clerk as an instance (not a constructor).
+      clerk = window.Clerk;
+      await clerk.load();
+    } catch (e) {
+      showAuthOverlay();
+      els.authHint.textContent = `登录组件初始化失败: ${e.message}`;
+      return false;
+    }
+
+    clerk.addListener(({ session }) => {
+      if (session) {
+        hideAuthOverlay();
+        loadPosts();
+        updateActionButtons();
+      } else {
+        showAuthOverlay();
+      }
+    });
+
+    if (clerk.session) return true;
+    showAuthOverlay();
+    return false;
   }
 
   // Post list
@@ -519,11 +595,16 @@
     if (e.target === els.cmdModal) hideCmdModal();
   });
 
+  els.btnSignIn.addEventListener('click', () => {
+    if (clerk) clerk.openSignIn();
+  });
+
   // Init
   async function init() {
     updateActionButtons();
-    await loadConfig();
-    await loadPosts();
+    const cfg = await loadConfig();
+    const authed = await initAuth(cfg);
+    if (authed) await loadPosts();
   }
 
   init();
